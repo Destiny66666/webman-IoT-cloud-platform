@@ -1,0 +1,279 @@
+<!--
+ * @Descripttion: 
+ * @version: 
+ * @Author: ZZP
+ * @Date: 2023-11-02 19:08:10
+ * @LastEditors: ZZP
+ * @LastEditTime: 2023-11-10 21:15:28
+-->
+<!--
+ * @Descripttion: 
+ * @version: 
+ * @Author: ZZP
+ * @Date: 2023-10-29 17:53:26
+ * @LastEditors: ZZP
+ * @LastEditTime: 2023-11-02 19:03:28
+-->
+
+
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>用户设备列表</title>
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  <link rel="stylesheet" href="../../layuiadmin/layui/css/layui.css" media="all">
+  <link rel="stylesheet" href="../../layuiadmin/style/admin.css" media="all">
+  <link rel="stylesheet" href="../../layuiadmin/style/template.css" media="all">
+  <script src="/js/jquery-3.6.0.js"></script>
+  <style>
+  </style>
+</head>
+
+<body>
+  <div class="layui-fluid">
+    <div class="layui-card">
+      <div class="layui-form layui-card-header layuiadmin-card-header-auto">
+        <div class="layui-form-item">
+          <div class="layui-inline">
+            <label class="layui-form-label">设备名称</label>
+            <div class="layui-input-block">
+              <input type="text" name="name" placeholder="请输入" autocomplete="off" class="layui-input">
+            </div>
+          </div>
+          <div class="layui-inline">
+            <label class="layui-form-label" style="width: 100px;">设备主人的邮箱</label>
+            <div class="layui-input-block" style="margin-left: 130px !important;">
+              <input type="text" name="email" placeholder="请输入" autocomplete="off" class="layui-input">
+            </div>
+          </div>
+
+          <div class="layui-inline">
+            <button class="layui-btn layuiadmin-btn-useradmin" lay-submit lay-filter="LAY-device-front-search">
+              <i class="layui-icon layui-icon-search layuiadmin-button-btn"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="layui-card-body">
+        <div style="padding-bottom: 10px;">
+          <button class="layui-btn layuiadmin-btn-useradmin" data-type="batchdel">删除</button>
+        </div>
+        <table id="LAY-device-manage" lay-filter="LAY-device-manage"></table>
+        <script type="text/html" id="imgTpl">
+          <img style="display: inline-block; width: 50%; height: 100%;" src= {{ d.picture }}>
+        </script>
+        <script type="text/html" id="table-useradmin-webuser">
+          <a  class="layui-btn layui-btn-normal layui-btn-xs" lay-event="edit"><i class="layui-icon layui-icon-edit"></i>编辑</a>
+          <a  class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del"><i class="layui-icon layui-icon-delete"></i>删除</a>
+        </script>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../layuiadmin/layui/layui.js"></script>
+  <script>
+    const token = window.localStorage.getItem('token')
+    layui.config({
+      base: '../../../layuiadmin/' //静态资源所在路径
+    }).extend({
+      index: 'lib/index' //主入口模块
+    }).use(['index', 'useradmin', 'table'], function () {
+      var $ = layui.$
+        , form = layui.form
+        , table = layui.table;
+
+      table.render({
+        elem: '#LAY-device-manage'
+        , url: '/admin/api/Device/getDeviceList'
+        , headers: {
+          authorization: "Bearer " + token,
+        }
+        , cols: [[
+          { type: 'checkbox', fixed: 'left' }
+          , { field: 'id', width: 100, title: 'ID', sort: true }
+          , { field: 'name', title: '设备名', minWidth: 100 }
+          , { field: 'picture', title: '设备图片', width: 100, templet: '#imgTpl' }
+          , {
+            field: 'uid.email', title: '此设备的主人邮箱', templet: function (data) {
+              return data.uid.email
+            }
+          }
+          , { field: 'createTime', title: '设备创建时间', sort: true }
+          , { title: '操作', width: 150, align: 'center', fixed: 'right', toolbar: '#table-useradmin-webuser' }
+        ]]
+        , page: true
+        , limit: 10
+        , height: 'full-220'
+        , text: '对不起，加载出现异常！'
+      });
+
+      table.on('tool(LAY-device-manage)', function (obj) {
+        var data = obj.data;
+        if (obj.event === 'del') {
+          layer.prompt({
+            formType: 1
+            , title: '敏感操作，请验证口令'
+          }, function (value, index) {
+            layer.close(index);
+            console.log(value)
+            layer.confirm('真的删除行么', function (index) {
+              obj.del();
+              layer.close(index);
+            });
+          });
+        } else if (obj.event === 'edit') {
+          var tr = $(obj.tr);
+          id = data.id;
+          layer.open({
+            type: 2
+            , title: ['编辑用户设备']
+            , content: '/device/myDeviceForm'
+            , maxmin: true
+            , area: ['500px', '500px']
+            , btn: ['确定', '取消']
+            , yes: function (index, layero) {
+              var iframeWindow = window['layui-layer-iframe' + index]
+                , submitID = 'LAY-user-front-submit'
+                , submit = layero.find('iframe').contents().find('#' + submitID);
+              //监听提交
+              iframeWindow.layui.form.on('submit(' + submitID + ')', function (data) {
+                console.log(data.field)
+                layer.confirm('真的修改吗', function (index_index) {
+                  layer.msg('修改中', { icon: 16 })
+                  var field = data.field; //获取提交的字段
+                  //提交 Ajax 成功后，静态更新表格中的数据
+                  //$.ajax({});
+                  var status = field.status
+                  if (status) {
+                    status = 1
+                  } else {
+                    status = 0
+                  }
+                  $.ajax({
+                    url: '/admin/api/Device/updateDeviceById',
+                    type: 'POST',
+                    headers: {
+                      authorization: "Bearer " + token,
+                    },
+                    data: {
+                      'id': id,
+                      'name': field.name,
+                      'room': field.room,
+                      'picture': field.image,
+                    },
+                    success: function (data) {
+                      if (data.code == 0) {
+                        layer.msg(data.msg, { offset: '15px', icon: 6 })
+                        layer.close(index); //关闭弹层
+                      } else {
+                        layer.msg(data.msg, { icon: 5 })
+                      }
+                    }
+                  })
+
+                  var dt = setInterval(() => {
+                    table.reload('LAY-device-manage'); //数据刷新
+                    clearInterval(dt);
+                  }, 500);
+                });
+              });
+              submit.trigger('click');
+            }, btn2: function (index, layero) {
+              layer.confirm('确定要关闭么', function (index_index) {
+                layer.close(index);
+                layer.close(index_index);
+              });
+              // 开启该代码可禁止点击该按钮关闭
+              return false
+            }, cancel: function (index, layero) {
+              layer.confirm('确定要关闭么', function (index_index) {
+                layer.close(index);
+                layer.close(index_index);
+              });
+              // 开启该代码可禁止点击该按钮关闭
+              return false
+            }
+          });
+        }
+      });
+      //监听搜索
+      form.on('submit(LAY-device-front-search)', function (data) {
+        var field = data.field;
+        //执行重载
+        table.reload('LAY-device-manage', {
+          where: field,
+          page: {
+            curr: 1 //重新从第 1 页开始 
+          }
+        });
+      });
+
+      //事件
+      var active = {
+        batchdel: function () {
+          var checkStatus = table.checkStatus('LAY-device-manage')
+            , checkData = checkStatus.data; //得到选中的数据
+          if (checkData.length === 0) {
+            return layer.msg('请选择数据');
+          }
+          layer.prompt({
+            formType: 1
+            , title: '敏感操作，请验证口令'
+          }, function (value, index) {
+            layer.close(index);
+
+            layer.confirm('确定删除吗？', function (index) {
+              //执行 Ajax 后重载
+              /*
+              admin.req({
+                url: 'xxx'
+                //,……
+              });
+              */
+              table.reload('LAY-device-manage');
+              layer.msg('已删除');
+            });
+          });
+        }
+
+      };
+
+      $('.layui-btn.layuiadmin-btn-useradmin').on('click', function () {
+        var type = $(this).data('type');
+        active[type] ? active[type].call(this) : '';
+      });
+    });
+
+  </script>
+  <script>
+
+    $(function () {
+      checkAdmin()
+    })
+    function checkAdmin() {
+      $.ajax({
+        url: "/user/api/getUserByToken",
+        type: "GET",
+        headers: {
+          authorization: "Bearer " + token,
+        },
+        success: function (data) {
+          if (data.code != 0) {
+            window.parent.location.href = "/login"
+          }
+          if (data.data.user.authority.id != 1) {
+            window.parent.location.href = "/404"
+          }
+        }
+      })
+    }
+  </script>
+</body>
+
+</html>

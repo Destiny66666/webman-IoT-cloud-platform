@@ -1,0 +1,284 @@
+<!--
+ * @Descripttion: 
+ * @version: 
+ * @Author: ZZP
+ * @Date: 2023-10-30 15:05:15
+ * @LastEditors: ZZP
+ * @LastEditTime: 2023-11-13 20:10:25
+-->
+<!--
+ * @Descripttion: 
+ * @version: 
+ * @Author: ZZP
+ * @Date: 2023-10-19 10:52:18
+ * @LastEditors: ZZP
+ * @LastEditTime: 2023-10-29 15:27:49
+-->
+
+
+
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>layuiAdmin 网站用户 iframe 框</title>
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  <link rel="stylesheet" href="../../../layuiadmin/layui/css/layui.css" media="all">
+  <script src="/js/jquery-3.6.0.js"></script>
+  <style>
+    .layui-upload-img {
+      width: 92px;
+      height: 92px;
+      margin: 0 10px 10px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="layui-form" lay-filter="layuiadmin-form-useradmin" id="layuiadmin-form-useradmin"
+    style="padding: 20px 0 0 0;">
+    <div class="layui-form-item">
+      <label class="layui-form-label">设备名称</label>
+      <div class="layui-input-inline">
+        <input type="text" id="name" name="name" lay-verify="required" placeholder="请输入设备名称" autocomplete="off"
+          class="layui-input">
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">设备地点</label>
+      <div class="layui-input-inline">
+        <input type="text" id="room" name="room" lay-verify="required" placeholder="请输入设备地点" autocomplete="off"
+          class="layui-input">
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">设备图片</label>
+
+      <div class="layui-input-inline">
+        <div class="layui-upload-list">
+          <img class="layui-upload-img" name="picture" lay-verify="image" autocomplete="off"
+            id="test-upload-normal-img">
+          <p id="test-upload-demoText"></p>
+        </div>
+        <button type="button" class="layui-btn" id="test-upload-normal">上传图片</button>
+        <div id="image-upload-p" class="layui-form-mid layui-word-aux">只能上传jpg，png格式的图片哦</div>
+      </div>
+    </div>
+    <div class="layui-form-item" id="deviceTemplate" style="display: none;">
+      <label class="layui-form-label">模板选择</label>
+      <div class="layui-inline">
+        <select name="devicetemplate" lay-verify="" id="deviceTemplateList">
+          <option value="">请选择一个模板</option>
+          <option value="010">北京</option>
+          <option value="021">上海</option>
+          <option value="0571">杭州</option>
+        </select>
+      </div>
+      <div class="layui-inline">
+        <div id="image-upload-p" class="layui-form-mid layui-word-aux">模板样式在设备模板中</div>
+      </div>
+    </div>
+    <div class="layui-form-item" id="insertDeviceCount">
+      <label class="layui-form-label">新增数量</label>
+      <div class="layui-input-inline">
+        <input type="text" name="insertDeviceCount" placeholder="请输入新增设备的数量" autocomplete="off" class="layui-input">
+      </div>
+    </div>
+    <input type="text" id="image" name="image" autocomplete="off" class="layui-input" value="" style="display: none;">
+    <div class="layui-form-item layui-hide">
+      <input type="button" lay-submit lay-filter="LAY-user-front-submit" id="LAY-user-front-submit" value="确认">
+    </div>
+  </div>
+
+  <script src="../../../layuiadmin/layui/layui.js"></script>
+  <script>
+    const token = window.localStorage.getItem('token')
+    layui.config({
+      base: '../../../layuiadmin/' //静态资源所在路径
+    }).extend({
+      index: 'lib/index' //主入口模块
+    }).use(['index', 'form', 'upload'], function () {
+      var $ = layui.$
+        , form = layui.form
+        , upload = layui.upload;
+
+      //普通图片上传
+      var uploadInst = upload.render({
+        elem: '#test-upload-normal'
+        , url: '/user/api/uploadImage',
+        headers: {
+          authorization: "Bearer " + token,
+        }
+        , before: function (obj) {
+          //预读本地文件示例，不支持ie8
+          obj.preview(function (index, file, result) {
+            $('#test-upload-normal-img').attr('src', result); //图片链接（base64）
+          });
+        }
+        , done: function (res) {
+          if (res.code == 0) {
+            $("#test-upload-normal-img").attr("src", res.data.url)
+            $("#image").val(res.data.url)
+            return layer.msg('上传成功');
+          } else {
+            return layer.msg('上传失败');
+          }
+          //上传成功
+        }
+        , error: function () {
+          //演示失败状态，并实现重传
+          var demoText = $('#test-upload-demoText');
+          demoText.html('<span style="color: #FF5722;">上传失败</span> <a class="layui-btn layui-btn-mini demo-reload">重试</a>');
+          demoText.find('.demo-reload').on('click', function () {
+            uploadInst.upload();
+          });
+        }
+      });
+
+
+      form.on('select', function (data) {
+        if (data.value != '') {
+          $.ajax({
+            url: '/user/Device/getDeviceTemplateById',
+            type: 'GET',
+            headers: {
+              authorization: "Bearer " + token,
+            },
+            data: {
+              "id": data.value,
+            },
+            success: function (data) {
+              $("#name").val(data.data.template.name)
+              $("#test-upload-normal-img").attr("src", data.data.template.picture)
+              $("#image").val(data.data.template.picture)
+            }
+          })
+
+        }
+
+      })
+
+      $(function () {
+        checkToken()
+        if (parent.id) {
+          console.log(parent.id);
+          adminGetDeviceById(parent.id)
+        } else {
+          var a = GetRequest();
+          var id = a['id'];
+          if (id) {
+            getDeviceById(id)
+          } else {
+            $("#deviceTemplate").attr("style", "display:black")
+            showDeviceTemplate()
+          }
+        }
+      })
+
+      function adminGetDeviceById(id) {
+        $.ajax({
+          url: '/admin/api/Device/getDeviceById',
+          type: 'GET',
+          data: {
+            id: id,
+          },
+          headers: {
+            authorization: "Bearer " + token,
+          },
+          success: function (data) {
+            $("#name").val(data.data.device.name)
+            $("#room").val(data.data.device.room)
+            $("#test-upload-normal-img").attr("src", data.data.device.picture)
+            $("#image").val(data.data.device.picture)
+            $("#insertDeviceCount").attr("style", "display:none")
+          }
+        })
+      }
+
+      function showDeviceTemplate() {
+        $.ajax({
+          url: '/user/Device/getDeviceTemplateList',
+          type: 'GET',
+          headers: {
+            authorization: "Bearer " + token,
+          },
+          data: {
+            "page": 1,
+            "limit": 99999,
+          },
+          success: function (data) {
+            $("#deviceTemplateList").empty()
+            $("<option></option>").attr("value", '').html("设备模板").append(
+            ).appendTo("#deviceTemplateList")
+            $.each(data.data, function (index, item) {
+              $("<option></option>").attr("value", item.id).html(item.name).append(
+              ).appendTo("#deviceTemplateList")
+            })
+            form.render()
+          }
+        })
+      }
+
+      function GetRequest() {
+        var url = location.search; //获取url中"?"符后的字串  
+        var theRequest = new Object();
+        if (url.indexOf("?") != -1) {
+          var str = url.substr(1);
+          strs = str.split("&");
+          for (var i = 0; i < strs.length; i++) {
+            theRequest[strs[i].split("=")[0]] = unescape(strs[i].split("=")[1]);
+          }
+        }
+        return theRequest;
+      }
+
+      function checkToken() {
+        $.ajax({
+          url: "/user/api/getUserByToken",
+          type: "POST",
+          headers: {
+            authorization: "Bearer " + token,
+          },
+          success: function (data) {
+            if (data.code != 0) {
+              layer.msg(data.msg, { icon: 5 })
+              setTimeout(() => {
+                window.parent.location.href = "/login"
+              }, 3000);
+            }
+          }
+        })
+      }
+
+      function getDeviceById(id) {
+        $.ajax({
+          url: '/user/Device/getDeviceById',
+          type: 'GET',
+          data: {
+            id: id,
+          },
+          headers: {
+            authorization: "Bearer " + token,
+          },
+          success: function (data) {
+            $("#name").val(data.data.device.name)
+            $("#room").val(data.data.device.room)
+            $("#test-upload-normal-img").attr("src", data.data.device.picture)
+            $("#image").val(data.data.device.picture)
+            $("#insertDeviceCount").attr("style", "display:none")
+          }
+        })
+      }
+    })
+
+  </script>
+  <script>
+
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,406 @@
+<!--
+ * @Descripttion: 
+ * @version: 
+ * @Author: ZZP
+ * @Date: 2023-11-01 14:22:33
+ * @LastEditors: ZZP
+ * @LastEditTime: 2023-11-11 18:44:07
+-->
+<!--
+ * @Descripttion: 
+ * @version: 
+ * @Author: ZZP
+ * @Date: 2023-10-29 17:53:26
+ * @LastEditors: ZZP
+ * @LastEditTime: 2023-10-31 15:54:52
+-->
+
+
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>我的设备</title>
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  <link rel="stylesheet" href="../../layuiadmin/layui/css/layui.css" media="all">
+  <link rel="stylesheet" href="../../layuiadmin/style/admin.css" media="all">
+  <link rel="stylesheet" href="../../layuiadmin/style/template.css" media="all">
+  <script src="/js/jquery-3.6.0.js"></script>
+  <style>
+    img {
+      margin-left: 50px;
+      height: 150px !important;
+      width: 150px !important;
+    }
+
+    .cmdlist-container {
+      width: 250px !important;
+      height: 320px !important;
+    }
+  </style>
+</head>
+
+<div class="layui-form layui-card-header layuiadmin-card-header-auto">
+  <div class="layui-form-item">
+    <div class="layui-inline">
+      <label class="layui-form-label">设备名称</label>
+      <div class="layui-input-block">
+        <input type="text" id="name" placeholder="请输入" autocomplete="off" class="layui-input">
+      </div>
+    </div>
+    <div class="layui-inline">
+      <label class="layui-form-label">设备地点</label>
+      <div class="layui-input-block">
+        <input type="text" id="room" placeholder="请输入" autocomplete="off" class="layui-input">
+      </div>
+    </div>
+    <div class="layui-inline">
+      <button class="layui-btn layuiadmin-btn-useradmin" lay-submit id="LAY-user-front-search">
+        <i class="layui-icon layui-icon-search layuiadmin-button-btn"></i>
+      </button>
+    </div>
+    <div class="layui-inline">
+      <button class="layui-btn layuiadmin-btn-useradmin" data-type="add">添加</button>
+    </div>
+  </div>
+</div>
+<div class="layui-form layui-fluid layadmin-cmdlist-fluid">
+
+  <div class="layui-row layui-col-space30" id="deviceTemplateList">
+  </div>
+  <div class="layui-col-md12 layui-col-sm12">
+    <div id="demo0"></div>
+  </div>
+</div>
+<script src="../../layuiadmin/layui/layui.js"></script>
+<script>
+  const token = window.localStorage.getItem('token')
+  let page = 1; //设置首页页码
+  let limit = 10;  //设置一页显示的条数
+  let total;    //总条数
+  let pages; //一共多少页
+  let name = ''; //设备名称
+  let room = ''; //设备地点
+  let id = 0
+
+  layui.config({
+    base: '../../layuiadmin/' //静态资源所在路径
+  }).extend({
+    index: 'lib/index' //主入口模块
+  }).use(['index', 'form']);
+  layui.use(['laypage', 'layer'], function () {
+    var laypage = layui.laypage
+      , layer = layui.layer
+      , form = layui.form;
+    var active = {
+      add: function () {
+        id = 0,
+          layer.open({
+            type: 2
+            , title: '添加设备'
+            , content: '/device/myDeviceForm'
+            , maxmin: true
+            , area: ['550px', '650px']
+            , btn: ['确定', '取消']
+            , yes: function (index, layero) {
+              var iframeWindow = window['layui-layer-iframe' + index]
+                , submitID = 'LAY-user-front-submit'
+                , submit = layero.find('iframe').contents().find('#' + submitID);
+              //监听提交
+              iframeWindow.layui.form.on('submit(' + submitID + ')', function (data) {
+                var field = data.field;
+                //获取提交的字段
+                //提交 Ajax 成功后，静态更新表格中的数据
+                //$.ajax({});
+                console.log(field)
+                layer.msg('新增设备中', {
+                  offset: '15px'
+                  , icon: 16
+                  , time: 2000
+                });
+                $.ajax({
+                  url: '/user/Device/insertDevice',
+                  type: 'POST',
+                  headers: {
+                    authorization: "Bearer " + token,
+                  },
+                  data: {
+                    'name': field.name,
+                    'room': field.room,
+                    'picture': field.image,
+                    'insertDeviceCount': field.insertDeviceCount
+                  },
+                  success: function (data) {
+                    if (data.code == 0) {
+                      layer.msg(data.msg, { offset: '15px', icon: 6 })
+                      showData()
+                      setTimeout(function () {
+                        showPage()
+                      }, 1000)
+                      layer.close(index); //关闭弹层
+                    } else {
+                      layer.msg(data.msg, { offset: '15px', icon: 5 })
+                    }
+                  }
+                })
+
+              });
+              submit.trigger('click');
+            }, btn2: function (index, layero) {
+              layer.confirm('确定要关闭么', function (index_index) {
+                layer.close(index);
+                layer.close(index_index);
+              });
+              // 开启该代码可禁止点击该按钮关闭
+              return false
+            }, cancel: function (index, layero) {
+              layer.confirm('确定要关闭么', function (index_index) {
+                layer.close(index);
+                layer.close(index_index);
+              });
+              // 开启该代码可禁止点击该按钮关闭
+              return false
+            }
+          });
+      }
+    }
+
+    $('.layui-btn.layuiadmin-btn-useradmin').on('click', function () {
+      var type = $(this).data('type');
+      active[type] ? active[type].call(this) : '';
+    });
+    $(function () {
+      checkToken()
+      showData()
+    })
+
+    $("#LAY-user-front-search").click(function () {
+      name = $("#name").val()
+      room = $("#room").val()
+      page = 1
+      showData()
+    })
+
+    window.showData = function () {
+      $.ajax({
+        url: '/user/Device/getDeviceListByToken',
+        type: 'GET',
+        headers: {
+          authorization: "Bearer " + token,
+        },
+        data: {
+          "page": page,
+          "limit": limit,
+          "name": name,
+          "room": room,
+        },
+        success: function (data) {
+          if (data.code == 0) {
+            total = data.count
+            pages = Math.ceil(data.count / limit)
+            let depts = data.data;
+            let html = '';
+            $("#deviceTemplateList").empty()
+            $.each(data.data, function (index, item) {
+              $("<div class=\"layui-col-md2 layui-col-sm4 \"></div>").append(
+                $("<div class=\"cmdlist-container\"></div>").append(
+                  $("<a href=\"javascript:;\"></a>").append(
+                    $("<img>").attr("src", item.picture)
+                  )
+                ).append(
+                  $("<a href=\"javascript:;\"></a>").append(
+                    $("<div class=\"cmdlist-text\"></div>").append(
+                      $("<h3></h3>").html("设备名称：" + item.name).attr("style", "margin-bottom: 5px;")
+                    ).append(
+                      $("<p></p>").html("设备地点：" + item.room).attr("style", "margin-bottom: 5px;")
+                    ).append(
+                      $("<input type=\"checkbox\" id=" + item.id + " lay-skin=\"switch\" lay-filter=\"switchDataID\"switch_data_room=" + item.room + " switch_data_name=" + item.name + " switch_data_id=" + item.id + " lay-text=\"开|关\" checked>")
+                    ).append(
+                      $("<div></div>").attr("style", "margin-top: 10px;").append(
+                        $("<button  class=\"layui-btn layui-btn-normal layui-btn-xs\" ><i class=\"layui-icon layui-icon-edit\"></i>编辑</button>").attr("onclick", "updateDeviceTemplate(" + item.id + ")")
+                      )
+                    )
+                  )
+                )
+              ).appendTo("#deviceTemplateList")
+              if (item.status == 0) {
+                $("#" + item.id).removeAttr("checked");
+              }
+              form.render();
+            })
+            if (data.count == 0) {
+              layer.msg('当前没有数据', { icon: 5 })
+              $("#demo0").empty();
+            } else {
+              showPage()
+            }
+          } else {
+            layer.msg(data.msg, { icon: 5 })
+          }
+
+        }
+      })
+    }
+
+
+
+    form.on('switch(switchDataID)', function (data) {
+      //开关是否开启，true或者false
+      var checked = data.elem.checked;
+      //获取所需属性值
+      var switch_data_room = data.elem.attributes['switch_data_room'].nodeValue;
+      var switch_data_id = data.elem.attributes['switch_data_id'].nodeValue;
+      var status = this.checked ? '1' : '0'
+      var checked = this.checked ? true : false
+      var switch_data_name = data.elem.attributes['switch_data_name'].nodeValue;
+      layer.msg(switch_data_room + "的" + switch_data_name + (checked ? '正在打开' : '正在关闭'), {
+        icon: 16,
+        offset: '6px'
+      });
+      $.ajax({
+        url: '/user/Device/updateDeviceStatusByIdAndToken',
+        type: 'POST',
+        headers: {
+          authorization: "Bearer " + token,
+        },
+        data: {
+          "id": switch_data_id,
+          "status": status,
+        },
+        success: function (data) {
+          if (data.code == 0) {
+            layer.msg(switch_data_room + "的" + switch_data_name + (checked ? '已打开' : '已关闭'), {
+              offset: '6px'
+              , time: 2000
+            });
+          } else {
+            layer.msg(data.msg, {
+              offset: '6px'
+              , icon: 5
+              , time: 3000
+            });
+          }
+        }
+      })
+    })
+    window.showPage = function () {
+      layui.use('laypage', function () {
+        let laypage = layui.laypage;
+        //执行一个laypage实例
+        laypage.render({
+          elem: 'demo0',  //注意laypage是 ID，不用加 # 号
+          count: total, //数据总数，从服务端得到
+          limit: limit,   //每页条数设置
+          curr: page,                      //起始页
+          groups: 3,                     //连续页码个数
+          prev: '上一页',               //上一页文本
+          next: '下一页',                //下一页文本
+          first: 1,                    //首页文本
+          last: pages,                   //尾页文本
+          layout: ['prev', 'page', 'next'],
+          jump: function (obj, first) {  //触发分页后的回调
+            //obj包含了当前分页的所有参数，第一次加载first为true
+            // console.log(obj.curr); //得到当前页，以便向服务端请求对应页的数据。
+            // console.log(obj.limit); //得到每页显示的条数
+            page = obj.curr;  //改变当前页码
+            limit = obj.limit;
+            //首次不执行，一定要加此判断，否则初始时会无限刷新
+            if (!first) {
+              showData()  //加载数据
+            }
+          }
+        });
+      });
+    }
+    function checkToken() {
+      $.ajax({
+        url: "/user/api/getUserByToken",
+        type: "POST",
+        headers: {
+          authorization: "Bearer " + token,
+        },
+        success: function (data) {
+          if (data.code != 0) {
+            layer.msg(data.msg, { icon: 5 })
+            setTimeout(() => {
+              window.parent.location.href = "/login"
+            }, 3000);
+          }
+        }
+      })
+    }
+  });
+
+
+  function updateDeviceTemplate(id) {
+    layer.open({
+      type: 2
+      , title: ['编辑设备']
+      , content: '/device/myDeviceForm?id=' + id
+      , maxmin: true
+      , area: ['500px', '500px']
+      , btn: ['确定', '取消']
+      , yes: function (index, layero) {
+        var iframeWindow = window['layui-layer-iframe' + index]
+          , submitID = 'LAY-user-front-submit'
+          , submit = layero.find('iframe').contents().find('#' + submitID);
+        //监听提交
+        iframeWindow.layui.form.on('submit(' + submitID + ')', function (data) {
+          layer.confirm('真的修改吗', function (index_index) {
+            layer.msg('修改中', { icon: 16 })
+            var field = data.field; //获取提交的字段
+            //提交 Ajax 成功后，静态更新表格中的数据
+            //$.ajax({});
+            $.ajax({
+              url: '/user/Device/updateDevice',
+              type: 'POST',
+              headers: {
+                authorization: "Bearer " + token,
+              },
+              data: {
+                'id': id,
+                'name': field.name,
+                'room': field.room,
+                'picture': field.image,
+              },
+              success: function (data) {
+                if (data.code == 0) {
+                  layer.msg(data.msg, { offset: '15px', icon: 6 })
+                  layer.close(index); //关闭弹层
+                  showData()
+                } else {
+                  layer.msg(data.msg, { icon: 5 })
+                }
+              }
+            })
+          });
+        });
+        submit.trigger('click');
+      }, btn2: function (index, layero) {
+        layer.confirm('确定要关闭么', function (index_index) {
+          layer.close(index);
+          layer.close(index_index);
+        });
+        // 开启该代码可禁止点击该按钮关闭
+        return false
+      }, cancel: function (index, layero) {
+        layer.confirm('确定要关闭么', function (index_index) {
+          layer.close(index);
+          layer.close(index_index);
+        });
+        // 开启该代码可禁止点击该按钮关闭
+        return false
+      }
+    });
+  }
+</script>
+<script>
+
+</script>
+</body>
+
+</html>

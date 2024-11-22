@@ -1,0 +1,201 @@
+<!--
+ * @Descripttion: 
+ * @version: 
+ * @Author: ZZP
+ * @Date: 2023-10-19 10:52:18
+ * @LastEditors: ZZP
+ * @LastEditTime: 2023-11-08 15:26:24
+-->
+
+
+
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>layuiAdmin 网站用户 iframe 框</title>
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  <link rel="stylesheet" href="../../../layuiadmin/layui/css/layui.css" media="all">
+  <script src="/js/jquery-3.6.0.js"></script>
+  <style>
+    .layui-upload-img {
+      width: 92px;
+      height: 92px;
+      margin: 0 10px 10px 0;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="layui-form" lay-filter="layuiadmin-form-useradmin" id="layuiadmin-form-useradmin"
+    style="padding: 20px 0 0 0;">
+    <div class="layui-form-item">
+      <label class="layui-form-label">角色</label>
+      <div class="layui-input-inline">
+        <select id="role" name="role" lay-verify="">
+          <option value="0">普通用户</option>
+          <option value="1">管理员</option>
+        </select>
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">用户名</label>
+      <div class="layui-input-inline">
+        <input type="text" id="name" name="username" lay-verify="required" placeholder="请输入用户名" autocomplete="off"
+          class="layui-input">
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">手机号码</label>
+      <div class="layui-input-inline">
+        <input type="text" id="phone" name="phone" lay-verify="phone" placeholder="请输入号码" autocomplete="off"
+          class="layui-input">
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">邮箱</label>
+      <div class="layui-input-inline">
+        <input type="text" id="email" name="email" lay-verify="email" placeholder="请输入邮箱" autocomplete="off"
+          class="layui-input" disabled>
+        <div id="email-upload-p" class="layui-form-mid layui-word-aux">邮箱不可编辑哦
+        </div>
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">头像</label>
+      <div class="layui-input-inline">
+        <div class="layui-upload-list">
+          <img class="layui-upload-img" name="image" lay-verify="image" autocomplete="off" id="test-upload-normal-img">
+          <p id="test-upload-demoText"></p>
+        </div>
+        <button type="button" class="layui-btn" id="test-upload-normal">上传图片</button>
+        <div id="image-upload-p" class="layui-form-mid layui-word-aux">只能上传jpg，png格式的图片哦
+        </div>
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">状态</label>
+      <div class="layui-input-inline">
+        <input id="switch" type="checkbox" name="status" lay-skin="switch" lay-text="正常|禁用" checked>
+      </div>
+    </div>
+
+    <input type="text" id="image" name="image" placeholder="请输入邮箱" autocomplete="off" class="layui-input" value=""
+      style="display: none;">
+    <div class="layui-form-item layui-hide">
+      <input type="button" lay-submit lay-filter="LAY-user-front-submit" id="LAY-user-front-submit" value="确认">
+    </div>
+  </div>
+
+  <script src="../../../layuiadmin/layui/layui.js"></script>
+  <script>
+    const token = window.localStorage.getItem('token')
+    layui.config({
+      base: '../../../layuiadmin/' //静态资源所在路径
+    }).extend({
+      index: 'lib/index' //主入口模块
+    }).use(['index', 'form', 'upload'], function () {
+      var $ = layui.$
+        , form = layui.form
+        , upload = layui.upload;
+
+      //普通图片上传
+      var uploadInst = upload.render({
+        elem: '#test-upload-normal'
+        , url: '/user/api/uploadImage',
+        headers: {
+          authorization: "Bearer " + token,
+        }
+        , before: function (obj) {
+          //预读本地文件示例，不支持ie8
+          obj.preview(function (index, file, result) {
+            $('#test-upload-normal-img').attr('src', result); //图片链接（base64）
+          });
+        }
+        , done: function (res) {
+          if (res.code == 0) {
+            $("#test-upload-normal-img").attr("src", res.data.url)
+            $("#image").val(res.data.url)
+            return layer.msg('上传成功');
+          } else {
+            return layer.msg('上传失败');
+          }
+          //上传成功
+        }
+        , error: function () {
+          //演示失败状态，并实现重传
+          var demoText = $('#test-upload-demoText');
+          demoText.html('<span style="color: #FF5722;">上传失败</span> <a class="layui-btn layui-btn-mini demo-reload">重试</a>');
+          demoText.find('.demo-reload').on('click', function () {
+            uploadInst.upload();
+          });
+        }
+      });
+      var id = parent.id;
+      $(function () {
+        if (id) {
+          $("#email").attr("disabled", "disabled")
+          $("#email-upload-p").attr("style", "display:black;")
+          console.log(id)
+          getUserById(id)
+        } else {
+          $("#email").removeAttr("disabled")
+          $("#email-upload-p").attr("style", "display:none;")
+        }
+      })
+      function checkAdmin() {
+        $.ajax({
+          url: "/user/api/getUserByToken",
+          type: "GET",
+          headers: {
+            authorization: "Bearer " + token,
+          },
+          success: function (data) {
+            if (data.code != 0) {
+              window.parent.location.href = "/login"
+            }
+            if (data.data.user.authority.id != 1) {
+              window.parent.location.href = "/404"
+            }
+          }
+        })
+      }
+      function getUserById(uid) {
+        $.ajax({
+          url: '/admin/api/users/adminGetUserById',
+          type: "GET",
+          headers: {
+            authorization: "Bearer " + token,
+          },
+          data: {
+            "id": uid,
+          },
+          success: function (data) {
+            id = 0
+            console.log(id)
+            $("#name").val(data.data.user.name)
+            $("#phone").val(data.data.user.phone)
+            $("#email").val(data.data.user.email)
+            $("#test-upload-normal-img").attr("src", data.data.user.avatar)
+            $("#image").val(data.data.user.avatar)
+            if (data.data.user.status == 0) {
+              console.log(data.data.user.status)
+              $("#switch").removeAttr("checked");
+              form.render();
+            }
+            
+          }
+        })
+      }
+    })
+
+  </script>
+
+</body>
+
+</html>

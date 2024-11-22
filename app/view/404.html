@@ -1,0 +1,27 @@
+<!--
+ * @Descripttion: 
+ * @version: 
+ * @Author: ZZP
+ * @Date: 2023-10-10 12:24:56
+ * @LastEditors: ZZP
+ * @LastEditTime: 2023-10-22 14:36:53
+-->
+<html>
+<head>
+    <title>404 Not Found - webman</title>
+    <script src="/js/jquery-3.6.0.js"></script>
+</head>
+<body>
+<center>
+    <h1>404 Not Found</h1>
+</center>
+<hr>
+<center>找不到路径噢</center>
+<center id="goback">点击回到主页</center>
+</body>
+<script>
+    $("#goback").click(function(){
+        window.parent.location.href="/"
+    })
+</script>
+</html>

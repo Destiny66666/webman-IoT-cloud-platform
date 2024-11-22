@@ -1,0 +1,254 @@
+<!--
+ * @Descripttion: 
+ * @version: 
+ * @Author: ZZP
+ * @Date: 2023-10-19 10:52:17
+ * @LastEditors: ZZP
+ * @LastEditTime: 2023-11-18 18:28:56
+-->
+
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>设置我的资料</title>
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  <link rel="stylesheet" href="../../../layuiadmin/layui/css/layui.css" media="all">
+  <link rel="stylesheet" href="../../../layuiadmin/style/admin.css" media="all">
+  <script src="/js/jquery-3.6.0.js"></script>
+  <style>
+    .layui-upload-img {
+      width: 92px;
+      height: 92px;
+      margin: 0 10px 10px 0;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="layui-fluid">
+    <div class="layui-row layui-col-space15">
+      <div class="layui-col-md12">
+        <div class="layui-card">
+          <div class="layui-card-header">我的资料</div>
+          <div class="layui-card-body" pad15>
+            <div class="layui-form" lay-filter="">
+              <div class="layui-form-item">
+                <label class="layui-form-label">我的角色</label>
+                <div class="layui-input-inline">
+                  <input type="text" id="authority" name="authority" disabled class="layui-input">
+                </div>
+                <div class="layui-form-mid layui-word-aux">当前角色不可更改为其它角色</div>
+              </div>
+              <div class="layui-form-item">
+                <label class="layui-form-label">邮箱</label>
+                <div class="layui-input-inline">
+                  <input type="text" id="email" name="email" lay-verify="email" autocomplete="off" class="layui-input"
+                    disabled>
+                </div>
+                <div class="layui-form-mid layui-word-aux">邮箱不可更改</div>
+              </div>
+              <div class="layui-form-item">
+                <label class="layui-form-label">用户名</label>
+                <div class="layui-input-inline">
+                  <input type="text" id="name" name="username" class="layui-input" disabled>
+                </div>
+              </div>
+              <div class="layui-form-item">
+                <label class="layui-form-label">头像</label>
+                <div class="layui-input-inline">
+                  <div class="layui-upload-list">
+                    <img class="layui-upload-img" id="test-upload-normal-img">
+                    <input type="text" id="image" name="image" placeholder="请输入邮箱" autocomplete="off" class="layui-input" value=""
+                    style="display: none;">
+                    <p id="test-upload-demoText"></p>
+                  </div>
+                  <button type="button" class="layui-btn" id="test-upload-normal" style="display: none;">上传图片</button>
+                  <div id="test-upload-p" class="layui-form-mid layui-word-aux" style="display: none;">只能上传jpg，png格式的图片哦
+                  </div>
+                </div>
+              </div>
+              <div class="layui-form-item">
+                <label class="layui-form-label">手机</label>
+                <div class="layui-input-inline">
+                  <input type="text" id="phone" name="cellphone" lay-verify="phone" autocomplete="off"
+                    class="layui-input" disabled>
+                </div>
+              </div>
+              <div class="layui-form-item">
+                <div class="layui-input-block">
+                  <button id="edit-btn" class="layui-btn">编辑信息</button>
+                  <button id="update-btn" class="layui-btn" lay-submit lay-filter="update-btn"
+                    style="display:none; margin-left:0px;">确认修改</button>
+                  <button id="again-btn" type="reset" class="layui-btn layui-btn-primary"
+                    style="display: none;">重置信息</button>
+                  <button id="cancel-btn" type="reset" class="layui-btn layui-btn-primary"
+                    style="display: none;">取消修改</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../../layuiadmin/layui/layui.js"></script>
+  <script>
+    const token = window.localStorage.getItem('token')
+    layui.config({
+      base: '../../../layuiadmin/' //静态资源所在路径
+    }).extend({
+      index: 'lib/index' //主入口模块
+    }).use(['index', 'set']);
+    var $ = layui.jquery
+      , upload = layui.upload
+      , layer = layui.layer
+      , form = layui.form;
+
+    form.render();
+    form.on('submit(update-btn)', function (data) {
+      var field = data.field
+      layer.confirm('确认修改？', function () {
+        $.ajax({
+          url: '/user/api/updateUserByToken',
+          type: "POST",
+          headers: {
+            authorization: "Bearer " + token,
+          },
+          data: {
+            "email": $("#email").val(),
+            "name": $("#name").val(),
+            "avatar": $("#image").val(),
+            "phone": $("#phone").val()
+          },
+          success: function (data) {
+            layer.msg('修改中', { icon: 16 })
+            if (data.code == 0) {
+              layer.msg('修改成功', { icon: 6 });
+              hiddenBtn()
+              return false;
+            } else {
+              layer.msg(data.msg, { icon: 5 })
+            }
+          }
+        })
+      });
+    })
+
+    //普通图片上传
+    var uploadInst = upload.render({
+      elem: '#test-upload-normal'
+      , url: '/user/api/uploadImage',
+      headers: {
+        authorization: "Bearer " + token,
+      }
+      , before: function (obj) {
+        //预读本地文件示例，不支持ie8
+        obj.preview(function (index, file, result) {
+          $('#test-upload-normal-img').attr('src', result); //图片链接（base64）
+        });
+      }
+      , done: function (res) {
+        //如果上传失败
+        if (res.code == 0) {
+          $("#test-upload-normal-img").attr("src", res.data.url)
+          $("#image").val(res.data.url)
+          return layer.msg('上传成功');
+        } else {
+          return layer.msg('上传失败');
+        }
+        //上传成功
+      }
+      , error: function () {
+        //演示失败状态，并实现重传
+        var demoText = $('#test-upload-demoText');
+        demoText.html('<span style="color: #FF5722;">上传失败</span> <a class="layui-btn layui-btn-mini demo-reload">重试</a>');
+        demoText.find('.demo-reload').on('click', function () {
+          uploadInst.upload();
+        });
+      }
+    });
+  </script>
+  <script>
+
+    $(function () {
+      getUserByToken()
+    })
+
+    function getUserByToken() {
+      $.ajax({
+        url: "/user/api/getUserByToken",
+        type: "POST",
+        headers: {
+          authorization: "Bearer " + token,
+        },
+        success: function (data) {
+          if (data.code != 0) {
+            layer.msg(data.msg, { icon: 5 })
+            setTimeout(() => {
+              window.parent.location.href = "/login"
+            }, 5000);
+          } else {
+            $("#authority").val(data.data.user.authority.name)
+            $("#email").val(data.data.user.email)
+            $("#name").val(data.data.user.name)
+            $("#test-upload-normal-img").attr("src", data.data.user.avatar)
+            $("#phone").val(data.data.user.phone)
+            $("#image").val(data.data.user.avatar)
+          }
+        }
+      })
+    }
+
+    $("#edit-btn").click(function () {
+      showBtn()
+    })
+
+    $("#again-btn").click(function () {
+      layer.confirm('确定重置信息！', function (index) {
+        getUserByToken()
+        layer.close(index);
+      });
+    })
+    $("#cancel-btn").click(function () {
+      layer.confirm('确定取消修改！', function (index) {
+        getUserByToken()
+        hiddenBtn()
+        layer.close(index);
+      });
+    })
+
+    //显示上传图片按钮，显示确认修改按钮，显示重新编写按钮，隐藏编辑信息按钮，名称文本框可以编辑，手机文本框可以编辑
+    function showBtn() {
+      $("#test-upload-normal").attr("style", "display:black;")
+      $("#test-upload-p").attr("style", "display:black;")
+      $("#cancel-btn").attr("style", "display:black;")
+      
+      $("#again-btn").attr("style", "display:black;")
+      $("#update-btn").attr("style", "display:black;margin-left:0px;")
+      $("#edit-btn").attr("style", "display:none;")
+      $("#name").removeAttr("disabled")
+      $("#phone").removeAttr("disabled")
+    }
+
+    //隐藏上传图片按钮，隐藏确认修改按钮，隐藏重新编写按钮，显示编辑信息按钮，名称文本框不可以编辑，手机文本框不可以编辑
+    function hiddenBtn() {
+      $("#test-upload-normal").attr("style", "display:none;")
+      $("#again-btn").attr("style", "display:none;")
+      $("#update-btn").attr("style", "display:none;margin-left:0px;")
+      $("#test-upload-p").attr("style", "display:none;")
+      $("#edit-btn").attr("style", "display:black;")
+      $("#name").attr("disabled", "1")
+      $("#phone").attr("disabled", "1")
+      $("#cancel-btn").attr("style", "display:none;")
+    }
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,186 @@
+<!--
+ * @Descripttion: 
+ * @version: 
+ * @Author: ZZP
+ * @Date: 2023-10-17 18:00:07
+ * @LastEditors: ZZP
+ * @LastEditTime: 2023-10-25 15:34:09
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录</title>
+    <link rel="stylesheet" href="/css/login.css">
+    <script src="/js/jquery-3.6.0.js"></script>
+    <script src="/layuiadmin/layui/layui.js"></script>
+    <script>
+        const res = `%c
+     __  __     ____         _       __           __    __
+    / / / /__  / / /___     | |     / /___  _____/ /___/ /
+   / /_/ / _ \\/ / / __ \\    | | /| / / __ \\/ ___/ / __  /
+  / __  /  __/ / / /_/ /    | |/ |/ / /_/ / /  / / /_/ /
+ /_/ /_/\\___/_/_/\\____/     |__/|__/\\____/_/  /_/\\__,_/
+
+`;
+        console.log(res, 'color: #43bb88;font-size: 16px;')
+
+    </script>
+</head>
+
+<body>
+    <section>
+
+        <div class="container">
+            <!-- 注册 -->
+            <div class="user singinBx">
+                <div class="formBx">
+                    <div style="display: flex;flex-wrap: wrap;">
+                        <h2>注册</h2>
+                        <input type="text" id="registeremailadd" placeholder="邮箱"><br>
+                        <input type="password" id="registerpassword" placeholder="密码"><br>
+                        <input type="password" id="confirmpassword" placeholder="确认密码">
+                        <input type="text" id="registercapthca" placeholder="验证码" style="width: 60%;">
+                        <img src="/user/captcha" onclick="this.src=this.src+'?time+'+Math.random()"
+                            style="margin-left: 10px; width: 35%; height: 40px;margin-top: 7px;" /><br>
+                        <div style="width: 100%;">
+                            <p class="signup">已有账号？<a href="#" onclick="topggleForm();">登录</a></p>
+                        </div>
+                        <input type="submit" id="register" value="注册">
+
+                    </div>
+                </div>
+                <div class="imgBx"><img src="/image/login//4.jpg" alt=""></div>
+            </div>
+
+            <!-- 邮箱验证 -->
+            <div class="user singupBx" id="emailcaptchadiv" style="display: none;">
+                <div class="formBx">
+                    <div style="width: 320px;">
+                        <div style="width: 100%;display: flex;">
+                            <h2 style="text-align: left;">邮箱验证</h2>
+                            <button id="esc" style="width: 10%; border:0;">X</button>
+                        </div>
+                        <hr>
+                        <input type="text" id="emailcaptcha" placeholder="邮箱验证码" style="width: 40%;">
+                        <span id="countdown" style="margin-left: 5px; margin-right: 5px;">30</span>
+                        <input type="submit" id="refreshemailcaptcha" value="重新发送验证码" style="width: 40%;">
+                        <input type="submit" id="checkemail" value="验证" style="width: 40%;">
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+    <script type="text/javascript">
+        var $ = layui.jquery
+            , layer = layui.layer;
+        function topggleForm() {
+            var container = document.querySelector('.container');
+            container.classList.toggle('active');
+        }
+
+        $("#login").click(function () {
+            $.ajax({
+                url: "/user/login",
+                type: "POST",
+                data: {
+                    "email": $("#loginemail").val(),
+                    "password": $("#loginpassword").val(),
+                    "captcha": $("#logincaptcha").val(),
+                },
+                success: function (data) {
+                    if (data.code == 1) {
+                        window.localStorage.setItem('token', data.data.access_token)
+                        layer.msg(data.msg, { icon: 6 });
+                        location.href = "/"
+                    } else {
+                        layer.msg(data.msg, { icon: 5 });
+                    }
+                }
+            })
+        })
+
+        $("#register").click(function () {
+            $.ajax({
+                url: "/user/register",
+                type: "POST",
+                data: {
+                    "emailadd": $("#registeremailadd").val(),
+                    "password": $("#registerpassword").val(),
+                    "confirmpassword": $("#confirmpassword").val(),
+                    "captcha": $("#registercapthca").val(),
+                },
+                success: function (data) {
+                    if (data.code == 1) {
+                        layer.msg(data.msg, { icon: 6 });
+                        countdown()
+                    } else {
+                        layer.msg(data.msg, { icon: 5 });
+                    }
+                }
+            })
+        })
+
+        $("#refreshemailcaptcha").click(function () {
+            $.ajax({
+                url: '/user/RefreshEmailCaptcha',
+                type: 'POST',
+                data: {
+                    "emailadd": $("#registeremailadd").val(),
+                },
+                success: function (data) {
+                    if (data.code == 1) {
+                        countdown()
+                        layer.msg(data.msg, { icon: 6 });
+                    } else {
+                        layer.msg(data.msg, { icon: 5 });
+                    }
+                }
+            })
+        })
+
+        $("#checkemail").click(function () {
+            $.ajax({
+                url: '/user/CreateUser',
+                type: 'POST',
+                data: {
+                    "emailadd": $("#registeremailadd").val(),
+                    "emailcaptcha": $("#emailcaptcha").val()
+                },
+                success: function (data) {
+                    if (data.code == 1) {
+                        layer.msg(data.msg, { icon: 6 });
+                    } else {
+                        layer.msg(data.msg, { icon: 5 });
+                    }
+                }
+            })
+        })
+
+        $("#esc").click(function () {
+            $("#emailcaptchadiv").attr("style", "display:none;");
+        })
+
+        function countdown() {
+            $("#emailcaptchadiv").attr("style", "display:black;");
+            $("#refreshemailcaptcha").attr('disabled', '1')
+            let timer = 30;
+            var dt = setInterval(() => {
+                timer--;
+                document.getElementById('countdown').innerHTML = timer;
+                if (timer == 0) {
+                    $('#commentpost-btn2').removeAttr("disabled")
+                    clearInterval(dt);
+                }
+            }, 1000);
+        }
+
+    </script>
+</body>
+
+</html>
